@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-v1
+spec:
+  replicas: 2
+  selector:
+   matchLabels:
+    app: myapp
+    version: v1
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: v1
+    spec:
+      containers:
+      - name: myapp
+        image: looshen/docker.mylearn:v1.0.1
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "200Mi"
+            cpu: "800m"
+          requests:
+            memory: "200Mi"
+            cpu: "800m"

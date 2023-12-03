@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ready-ingress
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - study.test.com
+      secretName: study-tls
+  rules:
+  - host: study.test.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: nodeport-service
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific

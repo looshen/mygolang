@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-v1
+spec:
+  replicas: 2
+  selector:
+   matchLabels:
+    app: myapp
+    version: v1
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: v1
+    spec:
+      volumes:
+      - name: message
+        hostPath:
+          path: /tmp
+      containers:
+      - name: myapp
+        #image: nginx
+        image: looshen/docker.mylearn:v1.0.1
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "echo postStart handler > /tmp/message1"]
+          preStop:
+            exec:
+              command: ["/bin/sh","-c","echo preStop handler > /tmp/message2"]
+        volumeMounts:
+        - name: message
+          mountPath: /tmp/
+        ports:
+        - containerPort: 8080
+        startupProbe:
+          failureThreshold: 3
+          exec:
+            command: ['/bin/sh','-c','echo startupProbe > /tmp/message3']
+          initialDelaySeconds: 20
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 2
+        readinessProbe:
+          failureThreshold: 3
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        #resources:
+        #  limits:
+        #    memory: "200Mi"
+        #    cpu: "800m"
+        #  requests:
+        #    memory: "200Mi"
+        #    cpu: "800m"
+        resources:
+          limits:
+            cpu: "800m"
+          requests:
+            memory: "200Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ready-nodeport
+  labels:
+    name: ready-nodeport
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 88
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 30880
+  selector:
+    app: myapp
+
+# curl 10.100.244.212:88/healthz
+
+#[root@k8s-master k8s]# kubectl get svc -o wide
+#NAME             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+#kubernetes       ClusterIP   10.96.0.1        <none>        443/TCP        13d     <none>
+#ready-nodeport   NodePort    10.100.244.212   <none>        88:30880/TCP   4m46s   app=myapp
+#[root@k8s-master k8s]# 
+#[root@k8s-master k8s]# curl 10.100.244.212:88/healthz
+#key:Accept, value:*/*
+#key:User-Agent, value:curl/7.29.0
+#version:1.2.3
+#r.URL.Path:/healthz
+#r.Host:10.100.244.212:88
+#Client IP: 192.168.159.141:44410 | HTTP Status Code: 200
+#[root@k8s-master k8s]# 
+#[root@k8s-master k8s]# kubectl get po -o wide
+#NAME                        READY   STATUS    RESTARTS   AGE     IP                NODE        NOMINATED NODE   READINESS GATES
+#myapp-v1-86964d5f8b-jxjwd   1/1     Running   0          3m24s   192.168.36.108    k8s-node1   <none>           <none>
+#myapp-v1-86964d5f8b-w66rv   1/1     Running   0          3m24s   192.168.169.166   k8s-node2   <none>           <none>
+#[root@k8s-master k8s]# 
+#[root@k8s-master k8s]# 
+#[root@k8s-master k8s]# kubectl get po myapp-v1-86964d5f8b-jxjwd -o yaml | grep qosClass 
+#  qosClass: BestEffort
+#[root@k8s-master k8s]# 

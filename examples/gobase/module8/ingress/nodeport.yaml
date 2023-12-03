@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeport-deployment
+  labels:
+    app: nodeport
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+     app: nodeport-test
+  template:
+    metadata:
+      labels:
+        app: nodeport-test
+    spec:
+      containers:
+      - name: nodeport
+        image: nginx
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeport-service
+spec:
+  selector:
+    app: nodeport-test
+  type: NodePort
+  ports:
+    - name: http
+      nodePort: 30226
+      port: 80
+      protocol: TCP
+      targetPort: 80
